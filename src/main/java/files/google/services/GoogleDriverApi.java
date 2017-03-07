@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
@@ -31,6 +30,16 @@ import com.google.api.services.drive.model.File;
 @Component
 public class GoogleDriverApi {
 	private static final Logger logger = LoggerFactory.getLogger(GoogleDriverApi.class);
+
+	@Value("${mail.smtp.username}")
+	String username;
+	@Value("${mail.smtp.password}")
+	String password;
+	@Value("${mail.smtp.from}")
+	String from;
+	@Value("${mail.smtp.to}")
+	String to;
+
 	@Value("${google.driver.application.name:test}")
 	String APPLICATION_NAME;
 
@@ -75,7 +84,16 @@ public class GoogleDriverApi {
 				clientSecrets, Collections.singleton(DriveScopes.DRIVE_FILE)).setDataStoreFactory(dataStoreFactory)
 				.build();
 		// authorize
-		return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
+		// try to send authen URL via email
+
+		EmailSenderObject emailObject = new EmailSenderObject();
+		emailObject.setFrom(from);
+		emailObject.setTo(to);
+		emailObject.setTitle("Oauth google driver url confirmation");
+		emailObject.setUsername(username);
+		emailObject.setPassword(password);
+
+		return new AuthorizationCodeInstalledLocal(flow, new LocalServerReceiver(), emailObject).authorize("user");
 	}
 
 	@PostConstruct
